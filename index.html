@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz de Perguntas e Respostas</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#7c3aed; --muted:#94a3b8; --text:#e6eef8;
+    }
+    body{
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg,#07102a 0%, #071025 60%);
+      color:var(--text);
+      margin:0;
+      padding:24px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px;
+      box-shadow:0 6px 30px rgba(2,6,23,0.6);
+      width:100%;
+      max-width:820px;
+      padding:20px;
+    }
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+    h1{font-size:20px;margin:0;}
+    p.lead{margin:0;color:var(--muted);font-size:13px;}
+    .question{padding:14px;border-radius:8px;background:rgba(255,255,255,0.01);margin-bottom:12px;border:1px solid rgba(255,255,255,0.03);}
+    .q-title{font-weight:600;margin-bottom:8px;}
+    .options{display:flex;flex-direction:column;gap:8px;}
+    label.option{
+      display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;cursor:pointer;
+      border:1px solid transparent;
+      user-select:none;
+    }
+    label.option input{width:18px;height:18px;flex:0 0 18px;}
+    label.option:hover{background:rgba(255,255,255,0.01);border-color:rgba(255,255,255,0.03);}
+    .controls{display:flex;gap:10px;align-items:center;margin-top:10px;}
+    button{
+      background:var(--accent);border:none;color:white;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600;
+    }
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);}
+    .result{margin-top:14px;padding:12px;border-radius:8px;background:rgba(124,58,237,0.08);color:var(--text);}
+    .correct{color:#10b981;font-weight:700}
+    .wrong{color:#ef4444;font-weight:700}
+    .small{font-size:13px;color:var(--muted)}
+    footer{margin-top:14px;text-align:right;font-size:13px;color:var(--muted)}
+    @media (max-width:480px){ .card{padding:14px} }
+  </style>
+</head>
+<body>
+  <main class="card" id="quiz-card" role="main">
+    <header>
+      <div>
+        <h1>Quiz sobre a contrução de Goiânia</h1>
+        <p class="lead">Marque a opção correta e clique em "Verificar".</p>
+      </div>
+      <div class="small">Pontuação ao fim</div>
+    </header>
+
+    <form id="quiz-form" aria-live="polite">
+      <!-- perguntas serão injetadas aqui -->
+      <div id="questions-container"></div>
+
+      <div class="controls">
+        <button type="button" id="check-btn">Verificar respostas</button>
+        <button type="button" id="reset-btn" class="secondary">Reiniciar</button>
+        <div style="flex:1"></div>
+        <div class="small">Perguntas: <span id="total-qs">0</span></div>
+      </div>
+
+      <div id="result-area" aria-atomic="true"></div>
+    </form>
+
+    <footer>
+      Dica: edite as perguntas em `questions` no script (id:quiz-script).
+    </footer>
+  </main>
+
+  <script>
+    // ===========================
+    // CONFIGURE AQUI AS PERGUNTAS
+    // ===========================
+    // type: "single" => radio (apenas 1 correta)
+    // type: "multiple" => checkbox (pode ter 1 ou mais corretas)
+    // answers: array de objetos { id, text }
+    // correct: array com os ids corretos (mesmo para single, mantenha como array)
+    const questions = [
+      {
+        id: "q1",
+        type: "single",
+        text: "Por que os prédios iniciais de Goiânia foram construídos no estilo Art Déco?",
+        answers: [
+          { id: "a", text: "Porque era mais barato que outros estilos." },
+          { id: "b", text: "Porque transmitia modernidade e progresso nos anos 1930." },
+          { id: "c", text: "Porque imitava as cidades medievais da Europa." },
+          { id: "d", text: "Porque era a única técnica conhecida pelos arquitetos locais." }
+        ],
+        correct: ["b"]
+      },
+      {
+        id: "q2",
+        type: "single",
+        text: "Qual foi o papel de Attílio Corrêa Lima no planejamento de Goiânia?",
+        answers: [
+          { id: "a", text: "Criou o plano original da cidade, com a Praça Cívica no centro e ruas planejadas." },
+          { id: "b", text: "Construiu pessoalmente os primeiros edifícios da cidade.  " },
+          { id: "c", text: "Decidiu o estilo Art Déco dos prédios de Goiânia. " },
+          { id: "d", text: "Atuou apenas como engenheiro de obras públicas." }
+        ],
+        correct: ["a"] 
+      },
+      {
+        id: "q3",
+        type: "single",
+        text: "Como o modernismo se integrou ao Art Déco na arquitetura de Goiânia?",
+        answers: [
+          { id: "a", text: "Substituiu totalmente o Art Déco, apagando sua influência." },
+          { id: "b", text: "Copiou modelos coloniais portugueses sem novidades. " },
+          { id: "c", text: "Foi ignorado, mantendo apenas o estilo Art Déco." },
+          { id: "d", text: "Somou-se ao Art Déco, trazendo simplicidade e funcionalidade." }
+        ],
+        correct: ["d"]
+      },
+      {
+        id: "q4",
+        type: "single",
+        text: "Qual foi a motivação para a costrução da capital?",
+        answers: [
+          { id: "a", text: "Criar um polo com centro planejado para administra a economia do estado de Goiás " },
+          { id: "b", text: "Para a costrução de um porto. " },
+          { id: "c", text: "Para garantir a presença do dominio Potuguês." },
+          { id: "d", text: "Para garantir a presença do dominio Espanhol." }
+        ],
+        correct: ["a"]
+      },
+      {
+        id: "q5",
+        type: "single",
+        text: "Qual das alternativas NÃO corresponde a um desafio enfrentado durante a construção de Goiânia?",
+        answers: [
+          { id: "a", text: "A falta de infraestrutura." },
+          { id: "b", text: "O transporte de materiais para a construção." },
+          { id: "c", text: "Pelas condições de higiene da capital." },
+          { id: "d", text: "A falta da mão de obra." }
+        ],
+        correct: ["c"]
+      },
+      {
+        id: "q6",
+        type: "single",
+        text: "Qual das alternativas NÃO corresponde a forma como foi superado os desafios?",
+        answers: [
+          { id: "a", text: "Incentivo da migração dos trabalhadores para a construção ." },
+          { id: "b", text: "Trocar de local" },
+          { id: "c", text: "Com fortes investimentos do governo." },
+          { id: "d", text: "Com o uso de materiais locais." }
+        ],
+        correct: ["b"]
+      }
+    ];
+
+    // ===========================
+    // RENDERIZAÇÃO DO QUIZ
+    // ===========================
+    const container = document.getElementById('questions-container');
+    const totalQsSpan = document.getElementById('total-qs');
+    const resultArea = document.getElementById('result-area');
+    totalQsSpan.textContent = questions.length;
+
+    function renderQuestions() {
+      container.innerHTML = '';
+      questions.forEach((q, qi) => {
+        const qDiv = document.createElement('div');
+        qDiv.className = 'question';
+        qDiv.id = q.id;
+
+        const title = document.createElement('div');
+        title.className = 'q-title';
+        title.textContent = (qi + 1) + '. ' + q.text;
+        qDiv.appendChild(title);
+
+        const opts = document.createElement('div');
+        opts.className = 'options';
+
+        q.answers.forEach(ans => {
+          const optId = `${q.id}-${ans.id}`;
+          const label = document.createElement('label');
+          label.className = 'option';
+          label.htmlFor = optId;
+
+          const input = document.createElement('input');
+          input.type = q.type === 'single' ? 'radio' : 'checkbox';
+          input.name = q.id;
+          input.id = optId;
+          input.value = ans.id;
+          input.setAttribute('aria-describedby', q.id + '-hint');
+
+          const span = document.createElement('span');
+          span.textContent = ans.text;
+
+          label.appendChild(input);
+          label.appendChild(span);
+          opts.appendChild(label);
+        });
+
+        // hint sobre o tipo
+        const hint = document.createElement('div');
+        hint.className = 'small';
+        hint.id = q.id + '-hint';
+        hint.textContent = q.type === 'single' ? 'Escolha uma opção.' : 'Você pode escolher mais de uma opção.';
+        qDiv.appendChild(opts);
+        qDiv.appendChild(hint);
+
+        container.appendChild(qDiv);
+      });
+    }
+
+    renderQuestions();
+
+    // ===========================
+    // LÓGICA DE CORREÇÃO
+    // ===========================
+    function getUserAnswers() {
+      // retorna objeto { qid: ['a','b'] }
+      const res = {};
+      questions.forEach(q => {
+        const selected = [];
+        const inputs = document.querySelectorAll(`#${q.id} input`);
+        inputs.forEach(inp => {
+          if (inp.checked) selected.push(inp.value);
+        });
+        res[q.id] = selected;
+      });
+      return res;
+    }
+
+    function arraysEqualIgnoringOrder(a, b) {
+      if (!a || !b) return false;
+      if (a.length !== b.length) return false;
+      const sa = [...a].sort();
+      const sb = [...b].sort();
+      return sa.every((v,i) => v === sb[i]);
+    }
+
+    function gradeQuiz() {
+      const user = getUserAnswers();
+      let correctCount = 0;
+      const perQuestionFeedback = [];
+
+      questions.forEach(q => {
+        const userAns = user[q.id] || [];
+        const isCorrect = arraysEqualIgnoringOrder(userAns, q.correct);
+        if (isCorrect) correctCount++;
+
+        // montar feedback por pergunta
+        perQuestionFeedback.push({
+          qid: q.id,
+          correct: isCorrect,
+          user: userAns,
+          correctAnswers: q.correct
+        });
+      });
+
+      return { score: correctCount, total: questions.length, details: perQuestionFeedback };
+    }
+
+    // ===========================
+    // EVENTOS
+    // ===========================
+    document.getElementById('check-btn').addEventListener('click', () => {
+      const result = gradeQuiz();
+      showResult(result);
+      // mover foco pro resultado para leitores de tela
+      resultArea.focus();
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      // desmarcar tudo
+      questionInputs = document.querySelectorAll('#questions-container input');
+      questionInputs.forEach(i => i.checked = false);
+      resultArea.innerHTML = '';
+      // rolar pra topo do quiz (opcional)
+      window.scrollTo({ top: document.getElementById('quiz-card').offsetTop - 20, behavior:'smooth' });
+    });
+
+    function showResult(result) {
+      const perc = Math.round((result.score / result.total) * 100);
+      let html = `
+        <div class="result" tabindex="-1">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div><strong>Você acertou ${result.score} de ${result.total}</strong></div>
+              <div class="small">Pontuação: ${perc}%</div>
+            </div>
+            <div style="text-align:right">
+              ${perc === 100 ? '<div class="correct">Parabéns — tudo certo! ✅</div>' : ''}
+              ${perc < 50 ? '<div class="wrong">Tente novamente .</div>' : ''}
+            </div>
+          </div>
+          <hr style="margin:10px 0;border:0;border-top:1px solid rgba(255,255,255,0.04)">
+      `;
+
+      // feedback por pergunta
+      result.details.forEach((d, idx) => {
+        const q = questions.find(x => x.id === d.qid);
+        const userText = d.user.length ? d.user.join(', ') : 'Nenhuma resposta';
+        const correctText = d.correctAnswers.join(', ');
+        const lineClass = d.correct ? 'correct' : 'wrong';
+
+        html += `
+          <div style="margin-bottom:8px">
+            <div><strong>${idx+1}. ${q.text}</strong></div>
+            <div class="small">Sua resposta: ${userText} — <span class="${lineClass}">${d.correct ? 'Correta' : 'Incorreta'}</span></div>
+            <div class="small">Resposta certa: ${correctText}</div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      resultArea.innerHTML = html;
+    }
+
+    // Acessibilidade extra: permitir Enter no formulário para submeter
+    document.getElementById('quiz-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      document.getElementById('check-btn').click();
+    });
+
+  </script>
+</body>
+</html>
